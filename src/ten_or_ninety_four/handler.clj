@@ -14,7 +14,9 @@
     (:body
       (clj-http.client/get
         "https://maps.googleapis.com/maps/api/directions/json"
-        {:query-params { "origin" from "destination" to }}))
+        {:query-params {"origin" from
+                        "destination" to
+                        "key" (System/getenv "GOOGLE_API_KEY")}}))
     true))
 
 
@@ -35,13 +37,18 @@
   (sort-by duration routes))
 
 
+(defn goog-route->route-obj
+  [route]
+  {:duration-raw (duration route)
+   :duration (seconds->time-string (duration route))
+   :summary (:summary route)})
+
+
 (defn handle-get-directions
   [from to]
-  (let [routes (sort-routes-by-duration (:routes (get-directions from to)))
-        best-route (first routes)]
-    {:body {:duration-raw (duration best-route)
-            :duration (seconds->time-string (duration best-route))
-            :summary (:summary (first routes))}}))
+  (let [routes (:routes (get-directions from to))]
+    {:body (map goog-route->route-obj (sort-routes-by-duration routes))
+     :headers {"Content-Type" "application/json"}}))
 
 
 (defroutes app-routes
